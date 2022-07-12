@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: prometheus
+  serviceName: "prometheus"
+  replicas: 1
+  minReadySeconds: 10
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: prometheus
+        image: docker.io/prom/prometheus:v2.36.2
+        ports:
+        - containerPort: 80
+        envFrom:
+        - configMapRef:
+            name: prometheus-config
+        volumeMounts:
+        - name: prometheus-cm-volume
+          mountPath: /etc/prometheus/prometheus.yml
+          subPath: prometheus.yml
+        - name: prometheus-volume
+          mountPath: /prometheus
+      volumes:
+        - name: prometheus-cm-volume
+          configMap:
+            items:
+            - key: prometheus.yml
+              path: prometheus.yml
+            name: prometheus-config
+        - name: prometheus-volume
+          emptyDir: {}
+  volumeClaimTemplates:
+  - metadata:
+      name: prometheus-volume
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: standard
+      resources:
+        requests:
+          storage: 1Gi
